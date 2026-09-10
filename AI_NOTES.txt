@@ -1,0 +1,140 @@
+AI / Maintainer Notes - Tender Keyword Scanner
+==============================================
+
+Architecture
+------------
+- backend/server.js
+  Express application entry point. Runs the backend on port 5000 by default,
+  serves generated reports through /reports, and mounts the API routes.
+
+- backend/src/routes/
+  Defines the document scanning API routes.
+
+- backend/src/controllers/
+  Handles the scan request and coordinates document processing.
+
+- backend/src/services/textExtractor.js
+  Extracts text from PDF using pdf-parse and DOCX using mammoth.
+
+- backend/src/services/keywordMatcher.js
+  Loads keywords from keywords.csv, performs normalized case-insensitive
+  matching, handles basic singular/plural variations, and calculates relevance.
+
+- backend/src/services/aiExtractor.js
+  Uses Google Gemini as a fallback for tender metadata extraction and fills
+  missing metadata fields while preserving deterministic extraction results.
+
+- backend/src/utils/
+  Utility functions used by the backend processing workflow.
+
+- backend/keywords.csv
+  Source of the configured Tritorc business keywords.
+
+- frontend/src/config/api.js
+  Axios configuration and frontend-to-backend API connection.
+
+Frontend
+--------
+- frontend/src/App.jsx
+  Main application controller for file selection, scanning, progress,
+  results and metadata inspection.
+
+
+- frontend/src/assets/
+  Frontend image and default Vite/React assets.
+
+- frontend/src/index.css and App.css
+  Application styling and responsive UI.
+
+API / Ports
+-----------
+- Backend default port: 5000.
+- Frontend development server: 5173 by default through Vite.
+- Frontend API base URL is currently configured in:
+  frontend/src/config/api.js
+- Scan endpoint:
+  POST /api/scan
+- Generated Excel reports are served through:
+  /reports
+
+Document Processing
+-------------------
+- Supported document formats for backend processing:
+  PDF and DOCX.
+- PDF text extraction uses pdf-parse.
+- DOCX text extraction uses mammoth.
+- Image-only/scanned PDFs may not produce useful extracted text because OCR
+  is not implemented.
+
+Keyword Matching
+----------------
+- Keywords are loaded from backend/keywords.csv.
+- Matching is case-insensitive.
+- Document text is normalized before matching.
+- Basic singular/plural word-form variations are supported.
+- Each configured keyword is counted once per document.
+- Matching is deterministic and does not depend on Gemini.
+
+Relevance Scoring
+-----------------
+- 0 matches  -> Not Related
+- 1-2 matches -> Possible
+- 3+ matches -> Related
+
+The relevance result is calculated dynamically from the number of matched
+keywords.
+
+Metadata Extraction
+-------------------
+The application extracts tender information including available fields such
+as tender ID, tender number, authority, location, dates, tender amount, EMD,
+document cost, tender fee, technical/financial qualification, scope,
+summary, description, corrigendum, purchaser address, email and website.
+
+Deterministic extraction is performed first.
+
+Gemini is used as a fallback to fill missing or difficult metadata fields.
+Explicit deterministic values take priority over AI-generated values.
+
+AI failure or quota errors must not stop the complete tender scan. The
+application continues with the metadata already available.
+
+Gemini Models
+-------------
+Primary model currently configured:
+- gemini-3.5-flash
+
+Potential fallback models:
+- gemini-3.6-flash
+- gemini-2.5-flash
+- gemini-
+
+Excel Report
+------------
+- Excel reports are generated using the xlsx package.
+- The report contains one result row per scanned document.
+- Results include document information, matched keywords, match count,
+  relevance and extracted metadata.
+- Generated reports are served through the backend /reports route and can be
+  downloaded from the frontend.
+
+Testing
+-------
+The application has been tested with multiple tender PDFs.
+
+Important test cases include:
+- Relevant tender containing Tritorc keywords.
+- Borderline tender containing 1-2 keywords.
+- Irrelevant tender containing no configured keywords.
+- Multiple-document batch scanning.
+- Excel report generation and download.
+
+Known Limitations
+-----------------
+- OCR is not implemented for scanned/image-only PDFs.
+- Relevance is keyword-based and does not perform semantic similarity.
+- Gemini metadata extraction depends on API availability and quota.
+- The frontend currently accepts DOC files in the file picker, but backend
+  text extraction supports PDF and DOCX. DOC should therefore not be treated
+  as a supported end-to-end format unless backend support is added.
+
