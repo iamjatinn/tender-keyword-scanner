@@ -107,7 +107,7 @@ Primary model currently configured:
 Potential fallback models:
 - gemini-3.6-flash
 - gemini-2.5-flash
-- gemini-
+- gemini-2.5-pro
 
 Excel Report
 ------------
